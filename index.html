@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linda's Bill Categorizer & Bento Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- LOGIN SPLASH SCREEN -->
+    <div id="login-splash" class="splash-container">
+        <div class="login-card">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fa-solid fa-receipt"></i></div>
+                <h1>Paloptical Bills</h1>
+                <p>Verify your identity to manage accounts</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-user"></i>
+                        <input type="text" id="username" placeholder="Linda" required autocomplete="username">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-lock-keyhole"></i>
+                        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div id="login-error" class="error-msg hidden">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Incorrect username or password
+                </div>
+                <button type="submit" class="btn-primary">Unlock Dashboard <i class="fa-solid fa-arrow-right"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER (Hidden until login) -->
+    <div id="app-container" class="app-hidden">
+        <!-- TOP NAVIGATION BAR -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="brand">
+                    <span class="brand-icon"><i class="fa-solid fa-receipt"></i></span>
+                    <h2>Paloptical Bills</h2>
+                </div>
+                <nav class="main-tabs">
+                    <button class="tab-btn active" data-tab="dashboard"><i class="fa-solid fa-chart-simple"></i> Dashboard</button>
+                    <button class="tab-btn" data-tab="outlook-mail"><i class="fa-solid fa-envelope"></i> Mail Scanner</button>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div id="demo-badge" class="badge warning hidden">Demo Fallback Mode</div>
+                <span class="user-profile"><i class="fa-regular fa-circle-user"></i> Linda</span>
+                <button id="logout-btn" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <!-- SUB-VIEW CONTAINER -->
+        <main class="app-content">
+            
+            <!-- VIEW: BENTO DASHBOARD -->
+            <section id="dashboard-view" class="tab-view active">
+                <div class="bento-grid">
+                    
+                    <!-- Box 1: Total Unpaid (Amber Accent) -->
+                    <div class="bento-card card-amber card-double-width">
+                        <div class="card-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <div class="card-info">
+                            <h3>Total Unpaid Bills</h3>
+                            <div class="card-value" id="stat-unpaid">$0.00</div>
+                            <p id="stat-unpaid-count">0 pending statements</p>
+                        </div>
+                        <div class="card-bg-gradient"></div>
+                    </div>
+
+                    <!-- Box 2: Total Paid (Emerald Accent) -->
+                    <div class="bento-card card-emerald card-double-width">
+                        <div class="card-icon"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="card-info">
+                            <h3>Total Paid (This Month)</h3>
+                            <div class="card-value" id="stat-paid">$0.00</div>
+                            <p id="stat-paid-count">0 bills settled</p>
+                        </div>
+                        <div class="card-bg-gradient"></div>
+                    </div>
+
+                    <!-- Box 3: Payment Method Logger (Royal Blue Accent) -->
+                    <div class="bento-card card-blue card-large card-double-height">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-wallet"></i> Log Bill Payment</h3>
+                        </div>
+                        <form id="payment-form" class="payment-logger-form">
+                            <div class="form-group">
+                                <label for="payment-bill-select">Select Pending Bill</label>
+                                <select id="payment-bill-select" required>
+                                    <option value="" disabled selected>Select a bill...</option>
+                                    <!-- Dynamic Options -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Payment Method</label>
+                                <div class="payment-options">
+                                    <label class="pay-method-btn">
+                                        <input type="radio" name="payment_method" value="check" required checked>
+                                        <span><i class="fa-solid fa-money-check-dollar"></i> Check</span>
+                                    </label>
+                                    <label class="pay-method-btn">
+                                        <input type="radio" name="payment_method" value="card">
+                                        <span><i class="fa-solid fa-credit-card"></i> Card</span>
+                                    </label>
+                                    <label class="pay-method-btn">
+                                        <input type="radio" name="payment_method" value="bank_transfer">
+                                        <span><i class="fa-solid fa-building-columns"></i> Bank</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label id="ref-label" for="ref-number">Check Number</label>
+                                    <input type="text" id="ref-number" placeholder="e.g. 1004" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="payment-amount">Amount Paid</label>
+                                    <input type="number" id="payment-amount" step="0.01" min="0.01" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="payment-date">Date Paid</label>
+                                    <input type="date" id="payment-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="payment-notes">Notes</label>
+                                    <input type="text" id="payment-notes" placeholder="Optional notes...">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-success">Record Payment <i class="fa-solid fa-floppy-disk"></i></button>
+                        </form>
+                    </div>
+
+                    <!-- Box 4: Payment Distribution Chart (Violet Accent) -->
+                    <div class="bento-card card-violet card-double-width">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Payment Breakdown</h3>
+                        </div>
+                        <div class="chart-container">
+                            <div id="chart-bars-list" class="chart-bars">
+                                <!-- Dynamic progress bars representing Card vs Check vs Bank spending -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Box 5: Paid Bills Log History (Slate/Dark Accent) -->
+                    <div class="bento-card card-slate card-double-width card-double-height scrollable-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-history"></i> Paid Bills History</h3>
+                        </div>
+                        <div class="history-list" id="payment-history-list">
+                            <!-- Dynamic paid logs -->
+                            <div class="empty-state">No paid bills recorded.</div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- VIEW: OUTLOOK-STYLE EMAIL VIEWER -->
+            <section id="outlook-mail-view" class="tab-view">
+                <div class="outlook-layout">
+                    <!-- Navigation sidebar -->
+                    <div class="outlook-sidebar">
+                        <button class="btn-scan" id="btn-trigger-scan"><i class="fa-solid fa-wand-magic-sparkles"></i> AI scan Inbox</button>
+                        <div class="folder-list">
+                            <div class="folder active" data-folder="all"><i class="fa-solid fa-inbox"></i> Inbox <span class="badge count-all" id="badge-total-mail">0</span></div>
+                            <div class="folder" data-folder="bills"><i class="fa-solid fa-file-invoice-dollar"></i> Bills & Statements <span class="badge info count-bills" id="badge-bill-mail">0</span></div>
+                            <div class="folder" data-folder="other"><i class="fa-solid fa-folder-open"></i> Classified Other</div>
+                        </div>
+                    </div>
+
+                    <!-- Mail List Pane -->
+                    <div class="outlook-list-pane">
+                        <div class="pane-header">
+                            <input type="text" id="search-mail" placeholder="Search emails...">
+                        </div>
+                        <div class="email-list" id="email-list-container">
+                            <!-- Dynamic email items -->
+                            <div class="empty-state">Select "AI scan Inbox" to retrieve messages.</div>
+                        </div>
+                    </div>
+
+                    <!-- Mail Reading Pane -->
+                    <div class="outlook-reading-pane" id="email-reading-pane">
+                        <div class="empty-reading-pane">
+                            <i class="fa-regular fa-envelope-open"></i>
+                            <p>Select an email to preview the details and AI classification payload</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scan Progress Overlay -->
+    <div id="scan-progress-overlay" class="overlay hidden">
+        <div class="progress-box">
+            <div class="spinner"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+            <h3>Connecting to Mail Server...</h3>
+            <p>Fetching headers and performing OpenRouter AI analysis...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="scan-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

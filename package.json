@@ -1,0 +1,22 @@
+{
+  "name": "ai-bills-tracker",
+  "version": "1.0.0",
+  "description": "AI Email Bill Categorizer & Bento Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.8",
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "imapflow": "^1.0.155",
+    "mailparser": "^3.6.9"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
