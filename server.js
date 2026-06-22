@@ -5,6 +5,8 @@ const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -96,6 +98,71 @@ app.get('/api/config-status', (req, res) => {
       : "Full integration active."
   });
 });
+
+// POST route to dynamically verify and save IMAP credentials
+app.post('/api/config', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
+  // 1. Verify IMAP connection first
+  const testClient = new ImapFlow({
+    host: process.env.IMAP_HOST || 'mail.twcbc.com',
+    port: parseInt(process.env.IMAP_PORT) || 993,
+    secure: process.env.IMAP_SECURE !== 'false',
+    auth: {
+      user: email,
+      pass: password
+    },
+    logger: false
+  });
+
+  try {
+    await testClient.connect();
+    await testClient.logout(); // Connection verified!
+  } catch (verifyError) {
+    console.error("IMAP Connection Verification Failed:", verifyError.message);
+    return res.status(400).json({ 
+      error: `Failed to connect to mail.twcbc.com: ${verifyError.message}. Please double check your email and password.` 
+    });
+  }
+
+  // 2. If verified, save to .env
+  try {
+    const envPath = path.join(__dirname, '.env');
+    let envContent = '';
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, 'utf8');
+    }
+
+    if (envContent.includes('IMAP_USER=')) {
+      envContent = envContent.replace(/IMAP_USER=.*/, `IMAP_USER=${email}`);
+    } else {
+      envContent += `\nIMAP_USER=${email}`;
+    }
+
+    if (envContent.includes('IMAP_PASSWORD=')) {
+      envContent = envContent.replace(/IMAP_PASSWORD=.*/, `IMAP_PASSWORD=${password}`);
+    } else {
+      envContent += `\nIMAP_PASSWORD=${password}`;
+    }
+
+    fs.writeFileSync(envPath, envContent, 'utf8');
+
+    // Update in-memory process environment immediately
+    process.env.IMAP_USER = email;
+    process.env.IMAP_PASSWORD = password;
+
+    console.log(`Successfully verified and updated email configuration to: ${email}`);
+
+    res.json({ success: true, msg: "Credentials verified and applied successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update configuration: " + error.message });
+  }
+});
+
+
 
 // GET all bills
 app.get('/api/bills', async (req, res) => {

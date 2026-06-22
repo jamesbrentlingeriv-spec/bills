@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchMailInput = document.getElementById('search-mail');
     const folderButtons = document.querySelectorAll('.folder');
 
+    // DOM Elements - Email Connection Modal
+    const configModal = document.getElementById('config-modal');
+    const configForm = document.getElementById('config-form');
+    const configEmail = document.getElementById('config-email');
+    const configPassword = document.getElementById('config-password');
+    const btnCloseConfig = document.getElementById('btn-close-config');
+
     // State Variables
     let bills = [];
     let payments = [];
@@ -473,6 +480,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = new Date(dateStr);
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
+
+    // Open connection config modal on clicking the demo badge
+    demoBadge.style.cursor = 'pointer';
+    demoBadge.addEventListener('click', () => {
+        configModal.classList.remove('hidden');
+    });
+
+    // Close modal
+    btnCloseConfig.addEventListener('click', () => {
+        configModal.classList.add('hidden');
+        configForm.reset();
+    });
+
+    // Handle saving connection config
+    configForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = configEmail.value.trim();
+        const password = configPassword.value;
+
+        try {
+            const res = await fetch(`${API_BASE}/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                alert(data.msg || "Credentials updated successfully!");
+                configModal.classList.add('hidden');
+                configForm.reset();
+                // Re-evaluate config status
+                initializeDashboard();
+            } else {
+                const errData = await res.json();
+                alert("Failed to save credentials: " + (errData.error || "Unknown error"));
+            }
+        } catch (err) {
+            console.error("Save credentials failed", err);
+            alert("Error sending request to backend server.");
+        }
+    });
 
     // Run auth check on load
     checkAuth();

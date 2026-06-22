@@ -208,6 +208,37 @@
         </main>
     </div>
 
+    <!-- Email Configuration Modal -->
+    <div id="config-modal" class="overlay hidden">
+        <div class="login-card" style="text-align: left;">
+            <div class="logo-area" style="text-align: center;">
+                <div class="logo-icon" style="background: linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-violet) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-gears"></i></div>
+                <h2>Email Connection</h2>
+                <p>Configure credentials for mail.twcbc.com</p>
+            </div>
+            <form id="config-form">
+                <div class="input-group">
+                    <label for="config-email">Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-envelope" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem;"></i>
+                        <input type="email" id="config-email" placeholder="linda@twcbc.com" required style="width: 100%; padding: 0.85rem 1rem 0.85rem 2.8rem; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-family: var(--font-outfit); font-size: 1rem;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="config-password">Email Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-key" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem;"></i>
+                        <input type="password" id="config-password" placeholder="••••••••" required style="width: 100%; padding: 0.85rem 1rem 0.85rem 2.8rem; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-family: var(--font-outfit); font-size: 1rem;">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary" style="flex: 1;">Save Credentials</button>
+                    <button type="button" id="btn-close-config" class="btn-success" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-secondary); flex: 1; box-shadow: none;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scan Progress Overlay -->
     <div id="scan-progress-overlay" class="overlay hidden">
         <div class="progress-box">
