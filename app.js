@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const configHost = document.getElementById('config-host');
     const configPort = document.getElementById('config-port');
     const configSecure = document.getElementById('config-secure');
+    const configOpenrouter = document.getElementById('config-openrouter');
     const btnCloseConfig = document.getElementById('btn-close-config');
 
 
@@ -484,8 +485,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 800);
 
+        const orKey = localStorage.getItem('openrouter_key');
+        if (!orKey) {
+            clearInterval(interval);
+            scanOverlay.classList.add('hidden');
+            alert("OpenRouter API Key is missing. Please click 'Change Account' and configure your OpenRouter key.");
+            return;
+        }
+
         try {
-            const res = await fetch(`${API_BASE}/scan`, { method: 'POST' });
+            const res = await fetch(`${API_BASE}/scan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ openrouterKey: orKey })
+            });
             clearInterval(interval);
             scanProgressBar.style.width = '100%';
             
@@ -528,6 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const host = configHost.value.trim();
         const port = configPort.value.trim();
         const secure = configSecure.checked;
+        const orKey = configOpenrouter.value.trim();
 
         try {
             const res = await fetch(`${API_BASE}/config`, {
@@ -539,6 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (res.ok) {
+                // Save OpenRouter key strictly locally in the browser
+                localStorage.setItem('openrouter_key', orKey);
+
                 const data = await res.json();
                 alert(data.msg || "Credentials updated successfully!");
                 configModal.classList.add('hidden');
@@ -570,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Register Service Worker for PWA capability
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('sw.js')
             .then(reg => console.log('Service Worker registered successfully'))
             .catch(err => console.log('Service Worker registration failed:', err));
     });

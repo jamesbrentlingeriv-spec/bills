@@ -329,10 +329,11 @@ app.get('/api/stats', async (req, res) => {
 
 // POST Scan Emails endpoint
 app.post('/api/scan', async (req, res) => {
+  const { openrouterKey } = req.body;
   const isImapConfigured = process.env.IMAP_USER && process.env.IMAP_USER !== 'your-email@gmail.com';
-  const isOpenRouterConfigured = process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'your-openrouter-api-key';
+  const hasOpenRouterKey = (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'your-openrouter-api-key') || (openrouterKey && openrouterKey.trim() !== '');
 
-  if (!isImapConfigured || !isOpenRouterConfigured) {
+  if (!isImapConfigured || !hasOpenRouterKey) {
     // If not configured, simulate scanning with mock incoming emails
     console.log("Using scanning simulation...");
     const simulatedBills = [
@@ -439,7 +440,7 @@ app.post('/api/scan', async (req, res) => {
       }
 
       // 2. Classify and Extract via OpenRouter
-      const classification = await analyzeEmailWithOpenRouter(email);
+      const classification = await analyzeEmailWithOpenRouter(email, openrouterKey);
       
       const isBill = classification ? !!classification.is_bill : false;
       const billRecord = {
@@ -487,9 +488,9 @@ app.post('/api/scan', async (req, res) => {
 });
 
 // OpenRouter Analysis helper
-async function analyzeEmailWithOpenRouter(email) {
-  const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash:free';
-  const apiKey = process.env.OPENROUTER_API_KEY;
+async function analyzeEmailWithOpenRouter(email, customKey) {
+  const model = process.env.OPENROUTER_MODEL || 'google/gemma-2-9b-it:free';
+  const apiKey = customKey || process.env.OPENROUTER_API_KEY;
 
   const prompt = `You are a billing statements classifier. Analyze this email details and body text, then return a JSON object ONLY (no markdown formatting, no codeblocks).
 

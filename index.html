@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#09090b">
     <title>Pal Optical Email Bill Crawler</title>
-    <link rel="manifest" href="/site.webmanifest">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -249,6 +249,13 @@
                     <div class="input-wrapper">
                         <i class="fa-regular fa-key" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem;"></i>
                         <input type="password" id="config-password" placeholder="••••••••" required style="width: 100%; padding: 0.85rem 1rem 0.85rem 2.8rem; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-family: var(--font-outfit); font-size: 1rem;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="config-openrouter">OpenRouter API Key (Kept local in browser)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-brain" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem;"></i>
+                        <input type="password" id="config-openrouter" placeholder="sk-or-v1-..." required style="width: 100%; padding: 0.85rem 1rem 0.85rem 2.8rem; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-family: var(--font-outfit); font-size: 1rem;">
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
