@@ -11,6 +11,7 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname)));
 
 const PORT = process.env.PORT || 3000;
 
@@ -101,16 +102,20 @@ app.get('/api/config-status', (req, res) => {
 
 // POST route to dynamically verify and save IMAP credentials
 app.post('/api/config', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
+  const { email, password, host, port, secure } = req.body;
+  if (!email || !password || !host || !port) {
+    return res.status(400).json({ error: "Email, password, host and port are required" });
   }
+
+  const imapHost = host.trim();
+  const imapPort = parseInt(port) || 993;
+  const imapSecure = secure !== false;
 
   // 1. Verify IMAP connection first
   const testClient = new ImapFlow({
-    host: process.env.IMAP_HOST || 'mail.twcbc.com',
-    port: parseInt(process.env.IMAP_PORT) || 993,
-    secure: process.env.IMAP_SECURE !== 'false',
+    host: imapHost,
+    port: imapPort,
+    secure: imapSecure,
     auth: {
       user: email,
       pass: password
@@ -118,13 +123,18 @@ app.post('/api/config', async (req, res) => {
     logger: false
   });
 
+  testClient.on('error', err => {
+    console.error("IMAP Verify Client Error:", err.message);
+  });
+
+
   try {
     await testClient.connect();
     await testClient.logout(); // Connection verified!
   } catch (verifyError) {
     console.error("IMAP Connection Verification Failed:", verifyError.message);
     return res.status(400).json({ 
-      error: `Failed to connect to mail.twcbc.com: ${verifyError.message}. Please double check your email and password.` 
+      error: `Failed to connect to ${imapHost}:${imapPort}: ${verifyError.message}. Please double check your server and credentials.` 
     });
   }
 
@@ -136,31 +146,38 @@ app.post('/api/config', async (req, res) => {
       envContent = fs.readFileSync(envPath, 'utf8');
     }
 
-    if (envContent.includes('IMAP_USER=')) {
-      envContent = envContent.replace(/IMAP_USER=.*/, `IMAP_USER=${email}`);
-    } else {
-      envContent += `\nIMAP_USER=${email}`;
-    }
+    const setEnvVar = (key, value) => {
+      const regex = new RegExp(`^${key}=.*`, 'm');
+      if (envContent.match(regex)) {
+        envContent = envContent.replace(regex, `${key}=${value}`);
+      } else {
+        envContent += `\n${key}=${value}`;
+      }
+    };
 
-    if (envContent.includes('IMAP_PASSWORD=')) {
-      envContent = envContent.replace(/IMAP_PASSWORD=.*/, `IMAP_PASSWORD=${password}`);
-    } else {
-      envContent += `\nIMAP_PASSWORD=${password}`;
-    }
+    setEnvVar('IMAP_HOST', imapHost);
+    setEnvVar('IMAP_PORT', imapPort);
+    setEnvVar('IMAP_SECURE', imapSecure);
+    setEnvVar('IMAP_USER', email);
+    setEnvVar('IMAP_PASSWORD', password);
 
     fs.writeFileSync(envPath, envContent, 'utf8');
 
     // Update in-memory process environment immediately
+    process.env.IMAP_HOST = imapHost;
+    process.env.IMAP_PORT = imapPort;
+    process.env.IMAP_SECURE = imapSecure;
     process.env.IMAP_USER = email;
     process.env.IMAP_PASSWORD = password;
 
-    console.log(`Successfully verified and updated email configuration to: ${email}`);
+    console.log(`Successfully verified and updated email configuration to: ${email} on ${imapHost}`);
 
     res.json({ success: true, msg: "Credentials verified and applied successfully!" });
   } catch (error) {
     res.status(500).json({ error: "Failed to update configuration: " + error.message });
   }
 });
+
 
 
 
@@ -371,13 +388,18 @@ app.post('/api/scan', async (req, res) => {
   const client = new ImapFlow({
     host: process.env.IMAP_HOST,
     port: parseInt(process.env.IMAP_PORT) || 993,
-    secure: process.env.IMAP_SECURE === 'true',
+    secure: process.env.IMAP_SECURE === 'true' || process.env.IMAP_SECURE === true,
     auth: {
       user: process.env.IMAP_USER,
       pass: process.env.IMAP_PASSWORD
     },
     logger: false
   });
+
+  client.on('error', err => {
+    console.error("IMAP Scan Client Error:", err.message);
+  });
+
 
   let connection = null;
   try {
@@ -387,8 +409,8 @@ app.post('/api/scan', async (req, res) => {
     // Fetch last 20 messages
     const emails = [];
     const searchResult = await client.search({ all: true });
-    // Get the last 20 messages
-    const recentUids = searchResult.slice(-20);
+    // Get the last 50 messages
+    const recentUids = searchResult.slice(-50);
 
     for (const uid of recentUids) {
       const message = await client.fetchOne(uid, { source: true, envelope: true });
@@ -397,7 +419,7 @@ app.post('/api/scan', async (req, res) => {
       emails.push({
         mail_id: message.envelope.messageId || `uid-${uid}`,
         subject: parsed.subject || "No Subject",
-        sender: parsed.from?.value[0]?.address || "Unknown Sender",
+        sender: parsed.from?.value[0]?.name || parsed.from?.value[0]?.address || "Unknown Sender",
         date: parsed.date || new Date(),
         bodyText: parsed.text || parsed.html || ""
       });
@@ -419,29 +441,30 @@ app.post('/api/scan', async (req, res) => {
       // 2. Classify and Extract via OpenRouter
       const classification = await analyzeEmailWithOpenRouter(email);
       
-      if (classification && classification.is_bill) {
-        const billRecord = {
-          mail_id: email.mail_id,
-          vendor: classification.vendor || "Unknown Vendor",
-          amount: parseFloat(classification.amount) || 0.00,
-          due_date: classification.due_date || null,
-          statement_date: classification.statement_date || null,
-          status: 'unpaid',
-          email_subject: email.subject,
-          email_sender: email.sender,
-          date_received: email.date.toISOString(),
-          extracted_summary: classification.summary || email.subject
-        };
+      const isBill = classification ? !!classification.is_bill : false;
+      const billRecord = {
+        mail_id: email.mail_id,
+        vendor: isBill ? (classification.vendor || "Unknown Vendor") : email.sender,
+        amount: isBill ? (parseFloat(classification.amount) || 0.00) : 0.00,
+        due_date: isBill ? (classification.due_date || null) : null,
+        statement_date: isBill ? (classification.statement_date || null) : null,
+        status: isBill ? 'unpaid' : 'other',
+        email_subject: email.subject,
+        email_sender: email.sender,
+        date_received: email.date.toISOString(),
+        extracted_summary: classification ? (classification.summary || email.subject) : `[AI Scan Offline] ${email.subject}`
+      };
 
-        if (supabase) {
-          const { error } = await supabase.from('bills').insert([billRecord]);
-          if (error) console.error("Supabase insert error:", error.message);
-        } else {
-          billRecord.id = `local-${Date.now()}-${billsFound}`;
-          localBills.push(billRecord);
-        }
-        
-        addedBills.push(billRecord);
+      if (supabase) {
+        const { error } = await supabase.from('bills').insert([billRecord]);
+        if (error) console.error("Supabase insert error:", error.message);
+      } else {
+        billRecord.id = `local-${Date.now()}-${addedBills.length}`;
+        localBills.push(billRecord);
+      }
+      
+      addedBills.push(billRecord);
+      if (isBill) {
         billsFound++;
       }
     }

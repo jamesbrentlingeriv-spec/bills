@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // API Server endpoint
-    const API_BASE = 'http://localhost:3000/api';
+    const API_BASE = window.location.protocol.startsWith('http') ? '/api' : 'http://localhost:3000/api';
 
     // DOM Elements - Auth
     const loginSplash = document.getElementById('login-splash');
@@ -44,7 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const configForm = document.getElementById('config-form');
     const configEmail = document.getElementById('config-email');
     const configPassword = document.getElementById('config-password');
+    const configHost = document.getElementById('config-host');
+    const configPort = document.getElementById('config-port');
+    const configSecure = document.getElementById('config-secure');
     const btnCloseConfig = document.getElementById('btn-close-config');
+
 
     // State Variables
     let bills = [];
@@ -317,12 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Filter bills by search query
         const query = searchMailInput.value.toLowerCase().trim();
-        let filtered = bills;
+        let filtered = [...bills];
+        // Sort by date_received descending (newest first)
+        filtered.sort((a, b) => new Date(b.date_received) - new Date(a.date_received));
 
         if (currentFolder === 'bills') {
-            filtered = bills.filter(b => b.status === 'unpaid'); // Unpaid invoices represent active billing mail
+            filtered = bills.filter(b => b.status === 'unpaid' || b.status === 'paid'); 
         } else if (currentFolder === 'other') {
-            filtered = bills.filter(b => b.status === 'paid'); // Paid statements represent closed folders
+            filtered = bills.filter(b => b.status === 'other'); 
         }
 
         if (query) {
@@ -334,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         document.getElementById('badge-total-mail').textContent = bills.length;
-        document.getElementById('badge-bill-mail').textContent = bills.filter(b => b.status === 'unpaid').length;
+        document.getElementById('badge-bill-mail').textContent = bills.filter(b => b.status === 'unpaid' || b.status === 'paid').length;
 
         if (filtered.length === 0) {
             emailListContainer.innerHTML = '<div class="empty-state">No emails found in this category.</div>';
@@ -343,21 +348,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filtered.forEach(b => {
             const activeClass = (selectedEmailId === b.id) ? 'active' : '';
-            const statusBadge = b.status === 'paid' 
-                ? '<span class="badge success">Paid</span>' 
-                : '<span class="badge warning">Bill Pending</span>';
+            
+            let badgeHTML = '';
+            if (b.status === 'paid') {
+                badgeHTML = '<span class="badge info">AI Statement</span> <span class="badge success">Paid</span>';
+            } else if (b.status === 'unpaid') {
+                badgeHTML = '<span class="badge info">AI Statement</span> <span class="badge warning">Bill Pending</span>';
+            } else {
+                badgeHTML = '<span class="badge">Personal / Other</span>';
+            }
 
             const itemHTML = `
                 <div class="email-item ${activeClass}" data-id="${b.id}">
                     <div class="email-item-header">
-                        <span class="email-sender">${b.vendor}</span>
+                        <span class="email-sender" title="${b.email_sender}">${b.vendor}</span>
                         <span class="email-date">${formatDate(b.date_received)}</span>
                     </div>
                     <div class="email-subject">${b.email_subject}</div>
                     <div class="email-preview">${b.extracted_summary || 'No description available'}</div>
                     <div class="email-badge-row">
-                        <span class="badge info">AI Statement</span>
-                        ${statusBadge}
+                        ${badgeHTML}
                     </div>
                 </div>
             `;
@@ -389,6 +399,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedBill = bills.find(b => b.id === id);
         if (!selectedBill) return;
 
+        let aiCardHTML = '';
+        if (selectedBill.status === 'other') {
+            aiCardHTML = `
+                <div class="ai-extraction-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); margin: 1.5rem;">
+                    <div class="ai-header" style="color: var(--text-secondary);">
+                        <i class="fa-solid fa-brain"></i> OpenRouter AI Analysis: Classified Other
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                        This email was scanned and determined to be non-billing correspondence (e.g. personal, newsletter, notification). No payment parameters were extracted.
+                    </p>
+                </div>
+            `;
+        } else {
+            aiCardHTML = `
+                <div class="ai-extraction-card" style="margin: 1.5rem;">
+                    <div class="ai-header">
+                        <i class="fa-solid fa-brain"></i> OpenRouter AI Extracted Statement Parameters
+                    </div>
+                    <div class="ai-grid">
+                        <div class="ai-field">
+                            <span class="ai-label">Vendor</span>
+                            <span class="ai-value">${selectedBill.vendor}</span>
+                        </div>
+                        <div class="ai-field">
+                            <span class="ai-label">Amount Due</span>
+                            <span class="ai-value" style="color: var(--accent-amber); font-weight: 700;">$${parseFloat(selectedBill.amount).toFixed(2)}</span>
+                        </div>
+                        <div class="ai-field">
+                            <span class="ai-label">Due Date</span>
+                            <span class="ai-value">${selectedBill.due_date ? formatDate(selectedBill.due_date) : 'N/A'}</span>
+                        </div>
+                        <div class="ai-field">
+                            <span class="ai-label">Statement Date</span>
+                            <span class="ai-value">${selectedBill.statement_date ? formatDate(selectedBill.statement_date) : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         // Render mail details panel
         emailReadingPane.innerHTML = `
             <div class="reading-pane-header">
@@ -402,30 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h1 class="reading-subject">${selectedBill.email_subject}</h1>
             </div>
             <div class="reading-pane-body">${selectedBill.extracted_summary}</div>
-            
-            <div class="ai-extraction-card">
-                <div class="ai-header">
-                    <i class="fa-solid fa-brain"></i> OpenRouter AI Extracted Statement Parameters
-                </div>
-                <div class="ai-grid">
-                    <div class="ai-field">
-                        <span class="ai-label">Vendor</span>
-                        <span class="ai-value">${selectedBill.vendor}</span>
-                    </div>
-                    <div class="ai-field">
-                        <span class="ai-label">Amount Due</span>
-                        <span class="ai-value" style="color: var(--accent-amber); font-weight: 700;">$${parseFloat(selectedBill.amount).toFixed(2)}</span>
-                    </div>
-                    <div class="ai-field">
-                        <span class="ai-label">Due Date</span>
-                        <span class="ai-value">${selectedBill.due_date ? formatDate(selectedBill.due_date) : 'N/A'}</span>
-                    </div>
-                    <div class="ai-field">
-                        <span class="ai-label">Statement Date</span>
-                        <span class="ai-value">${selectedBill.statement_date ? formatDate(selectedBill.statement_date) : 'N/A'}</span>
-                    </div>
-                </div>
-            </div>
+            ${aiCardHTML}
         `;
     };
 
@@ -498,6 +525,9 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const email = configEmail.value.trim();
         const password = configPassword.value;
+        const host = configHost.value.trim();
+        const port = configPort.value.trim();
+        const secure = configSecure.checked;
 
         try {
             const res = await fetch(`${API_BASE}/config`, {
@@ -505,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, host, port, secure })
             });
 
             if (res.ok) {
@@ -525,6 +555,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Settings Button toggle
+    const btnOpenSettings = document.getElementById('btn-open-settings');
+    if (btnOpenSettings) {
+        btnOpenSettings.addEventListener('click', () => {
+            configModal.classList.remove('hidden');
+        });
+    }
+
     // Run auth check on load
     checkAuth();
 });
+
+// Register Service Worker for PWA capability
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registered successfully'))
+            .catch(err => console.log('Service Worker registration failed:', err));
+    });
+}
+
